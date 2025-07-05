@@ -1,0 +1,9 @@
+{
+    auto_https disable_redirects
+}
+
+server:443 {
+    root * /var/www
+    tls internal
+    file_server browse
+}
