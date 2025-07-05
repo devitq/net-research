@@ -35,7 +35,7 @@ resource "libvirt_network" "default" {
   mode      = "nat"
   addresses = [local.network_cidr]
   mtu       = local.mtu
-  autostart = false
+  autostart = true
 
   dns {
     local_only = false
@@ -73,7 +73,6 @@ resource "libvirt_volume" "server_image" {
 data "template_file" "client_user_data" {
   template = file("${path.module}/configs/cloud-init/client.yaml.tpl")
   vars = {
-    run_benchmarks_script = base64encode(file("${path.module}/../scripts/run_benchmarks"))
     hosts_file            = base64encode(file("${path.module}/configs/hosts"))
   }
 }
