@@ -4,6 +4,13 @@ HOST="server"
 USER="ubuntu"
 PASSWORD="ubuntu"
 
+for cmd in sshpass; do
+    if ! command -v $cmd &> /dev/null; then
+        echo "Error: $cmd is not installed. Please install it first."
+        exit 1
+    fi
+done
+
 echo "Fetching interfaces from server..."
 interfaces=$(sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "$USER@$HOST" \
   "ip -o link show | awk -F': ' '!/lo:/ {print \$2}'")
