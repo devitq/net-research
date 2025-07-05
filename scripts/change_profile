@@ -1,0 +1,62 @@
+#!/bin/bash
+
+HOST="server"
+USER="ubuntu"
+PASSWORD="ubuntu"
+
+echo "Fetching interfaces from server..."
+interfaces=$(sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "$USER@$HOST" \
+  "ip -o link show | awk -F': ' '!/lo:/ {print \$2}'")
+
+PS3="Select network interface: "
+select interface in $interfaces; do
+  if [[ -n "$interface" ]]; then
+    echo "Selected interface: $interface"
+    break
+  else
+    echo "Invalid selection"
+  fi
+done
+
+PS3="Select latency/packet loss profile: "
+profiles=(
+  "clear config"
+  "10 ms, 0% pl"
+  "100 ms, 0% pl"
+  "10 ms, 2% pl"
+  "50 ms, 2% pl"
+  "100 ms, 2% pl"
+  "10 ms, 6% pl"
+  "custom"
+)
+
+select profile in "${profiles[@]}"; do
+  case $REPLY in
+    1) delay=0; loss=0 ;;
+    2) delay=10; loss=0 ;;
+    3) delay=100; loss=0 ;;
+    4) delay=10; loss=2 ;;
+    5) delay=50; loss=2 ;;
+    6) delay=100; loss=2 ;;
+    7) delay=10; loss=6 ;;
+    8)
+      read -p "Enter delay (ms): " delay
+      read -p "Enter packet loss (%): " loss
+      ;;
+    *)
+      echo "Invalid option"
+      continue
+      ;;
+  esac
+  break
+done
+
+if [[ $delay -eq 0 && $loss -eq 0 ]]; then
+  command="sudo tc qdisc del dev $interface root || true"
+else
+  command="sudo tc qdisc replace dev $interface root netem delay ${delay}ms loss ${loss}%"
+fi
+
+echo "Applying configuration: $profile"
+sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "$USER@$HOST" "$command"
+echo "Configuration applied successfully"
