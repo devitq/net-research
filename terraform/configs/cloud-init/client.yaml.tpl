@@ -26,11 +26,6 @@ packages:
   - tftp-hpa
 
 write_files:
-  - path: /home/ubuntu/run_benchmarks
-    owner: root:root
-    permissions: '0755'
-    encoding: b64
-    content: ${run_benchmarks_script}
   - path: /etc/hosts
     append: true
     encoding: b64
