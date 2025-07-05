@@ -1,0 +1,13 @@
+# Terraform files
+**/.terraform/*
+*.auto.tfvars
+*.tfoverride
+.envrc
+.terraformrc
+terraform.rc
+terraform.tfstate
+terraform.tfstate*
+.terraform*
+
+# Env files
+.env
