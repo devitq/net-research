@@ -10,7 +10,7 @@ Ensure you have the following installed on your system:
 
 ## Deploying environment
 
-NOTE: You must have `libvirt` daemon running running
+NOTE: You must have `libvirt` daemon running
 
 ### Goto Terraform directory
 
@@ -44,7 +44,7 @@ terraform init
 terraform apply
 ```
 
-NOTE: Wait for several minutes until all required things will provided to the vms
+NOTE: Wait for several minutes until all required things will be provided to the vms
 
 ## CheatSheet
 
@@ -67,7 +67,7 @@ tftp server -c get /var/www/<size>MB.file
 ### Run benchmarks
 
 ```bash
-./scripts/run_benchmarks
+./scripts/run_benchmarks output_dir
 ```
 
 This script does the following things
@@ -90,7 +90,9 @@ Refer to [this](#commands-for-client)
 
 #### Stops `tcpdump`
 
-### Merge `pcap` files
+Using `capinfos` (wireshark builtin cmd utility) it gets first packet time in epoch and then shifts all packets using `editcap` (wireshark builtin cmd utility) to the beginning of epoch time.
+
+#### Merges `pcap` files
 
 ```bash
 mergecap -w merged.pcap dump1 dump2 ...
