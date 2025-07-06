@@ -5,10 +5,10 @@ USER="ubuntu"
 PASSWORD="ubuntu"
 
 for cmd in sshpass; do
-    if ! command -v $cmd &> /dev/null; then
-        echo "Error: $cmd is not installed. Please install it first."
-        exit 1
-    fi
+  if ! command -v $cmd &>/dev/null; then
+    echo "Error: $cmd is not installed. Please install it first."
+    exit 1
+  fi
 done
 
 echo "Fetching interfaces from server..."
@@ -39,21 +39,42 @@ profiles=(
 
 select profile in "${profiles[@]}"; do
   case $REPLY in
-    1) delay=0; loss=0 ;;
-    2) delay=10; loss=0 ;;
-    3) delay=100; loss=0 ;;
-    4) delay=10; loss=2 ;;
-    5) delay=50; loss=2 ;;
-    6) delay=100; loss=2 ;;
-    7) delay=10; loss=6 ;;
-    8)
-      read -p "Enter delay (ms): " delay
-      read -p "Enter packet loss (%): " loss
-      ;;
-    *)
-      echo "Invalid option"
-      continue
-      ;;
+  1)
+    delay=0
+    loss=0
+    ;;
+  2)
+    delay=10
+    loss=0
+    ;;
+  3)
+    delay=100
+    loss=0
+    ;;
+  4)
+    delay=10
+    loss=2
+    ;;
+  5)
+    delay=50
+    loss=2
+    ;;
+  6)
+    delay=100
+    loss=2
+    ;;
+  7)
+    delay=10
+    loss=6
+    ;;
+  8)
+    read -p "Enter delay (ms): " delay
+    read -p "Enter packet loss (%): " loss
+    ;;
+  *)
+    echo "Invalid option"
+    continue
+    ;;
   esac
   break
 done
