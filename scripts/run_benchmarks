@@ -94,10 +94,10 @@ run_benchmark() {
 
     case $protocol in
     http1)
-        run_vm "$CLIENT_VM" "curl -s -o /dev/null http://$SERVER_VM:80/$FILENAME?client=$client_cc&server=$server_cc"
+        run_vm "$CLIENT_VM" "curl -s -o /dev/null 'http://$SERVER_VM:80/$FILENAME?client=$client_cc&server=$server_cc'"
         ;;
     http2)
-        run_vm "$CLIENT_VM" "curl -s -o /dev/null --http2-prior-knowledge http://$SERVER_VM:81/$FILENAME?client=$client_cc&server=$server_cc"
+        run_vm "$CLIENT_VM" "curl -s -o /dev/null --http2-prior-knowledge 'http://$SERVER_VM:81/$FILENAME?client=$client_cc&server=$server_cc'"
         ;;
     http3)
         run_vm "$CLIENT_VM" "./curl -s -o /dev/null --http3-only --insecure https://$SERVER_VM:443/$FILENAME"
