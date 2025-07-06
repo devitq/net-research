@@ -10,7 +10,7 @@ PASSWORD="ubuntu"
 SIZE="10"
 FILENAME="${SIZE}MB.file"
 
-TCPDUMP_DURATION=300
+TCPDUMP_DURATION=3600
 TCP_CC_COMBINATIONS=("reno reno" "reno bbr" "bbr reno" "bbr bbr")
 
 if [ $# -eq 0 ]; then
@@ -21,8 +21,8 @@ else
     echo "Using specified output directory: $OUTPUT_DIR"
 fi
 
-for cmd in sshpass tcpdump; do
-    if ! command -v $cmd &> /dev/null; then
+for cmd in sshpass tcpdump capinfos editcap bc; do
+    if ! command -v $cmd &>/dev/null; then
         echo "Error: $cmd is not installed. Please install it first."
         exit 1
     fi
@@ -66,34 +66,45 @@ run_benchmark() {
         base_name="${protocol}"
     fi
 
-    pcap_file="${OUTPUT_DIR}/${base_name}.pcap"
+    pcap_file="${OUTPUT_DIR}/${base_name}_unsynced.pcap"
+    pcap_file_synced="${OUTPUT_DIR}/${base_name}.pcap"
 
     case $protocol in
-        http1)
-            filter="tcp and port 80 and host ${CLIENT_IP} and host ${SERVER_IP}" ;;
-        http2)
-            filter="tcp and port 81 and host ${CLIENT_IP} and host ${SERVER_IP}" ;;
-        http3)
-            filter="udp and port 443 and host ${CLIENT_IP} and host ${SERVER_IP}" ;;
-        tftp)
-            filter="udp and host ${CLIENT_IP} and host ${SERVER_IP}" ;;
+    http1)
+        filter="tcp and port 80 and host ${CLIENT_IP} and host ${SERVER_IP}"
+        ;;
+    http2)
+        filter="tcp and port 81 and host ${CLIENT_IP} and host ${SERVER_IP}"
+        ;;
+    http3)
+        filter="udp and port 443 and host ${CLIENT_IP} and host ${SERVER_IP}"
+        ;;
+    tftp)
+        filter="udp and host ${CLIENT_IP} and host ${SERVER_IP}"
+        ;;
     esac
 
     echo "Starting $protocol capture with filter: $filter"
 
-    timeout $TCPDUMP_DURATION tcpdump -i "$interface" -w "$pcap_file" "$filter" >/dev/null 2>&1 &
+    timeout $TCPDUMP_DURATION \
+        tcpdump -i "$interface" -w "$pcap_file" "$filter" \
+        >/dev/null 2>&1 &
     tcpdump_pid=$!
     sleep 2
 
     case $protocol in
-        http1)
-            run_vm "$CLIENT_VM" "curl -s -o /dev/null http://$SERVER_VM:80/$FILENAME" ;;
-        http2)
-            run_vm "$CLIENT_VM" "curl -s -o /dev/null --http2-prior-knowledge http://$SERVER_VM:81/$FILENAME" ;;
-        http3)
-            run_vm "$CLIENT_VM" "./curl -s -o /dev/null --http3-only --insecure https://$SERVER_VM:443/$FILENAME" ;;
-        tftp)
-            run_vm "$CLIENT_VM" "rm -f $FILENAME; tftp $SERVER_VM -c get /var/www/$FILENAME" ;;
+    http1)
+        run_vm "$CLIENT_VM" "curl -s -o /dev/null http://$SERVER_VM:80/$FILENAME?client=$client_cc&server=$server_cc"
+        ;;
+    http2)
+        run_vm "$CLIENT_VM" "curl -s -o /dev/null --http2-prior-knowledge http://$SERVER_VM:81/$FILENAME?client=$client_cc&server=$server_cc"
+        ;;
+    http3)
+        run_vm "$CLIENT_VM" "./curl -s -o /dev/null --http3-only --insecure https://$SERVER_VM:443/$FILENAME"
+        ;;
+    tftp)
+        run_vm "$CLIENT_VM" "rm -f $FILENAME; tftp $SERVER_VM -c get /var/www/$FILENAME"
+        ;;
     esac
 
     sleep 4
@@ -101,10 +112,16 @@ run_benchmark() {
     wait $tcpdump_pid 2>/dev/null
 
     echo "Capture saved to $pcap_file"
+
+    first_packet_time=$(capinfos -a -S "$pcap_file" 2>/dev/null | awk '/Earliest packet time/ {print $4}')
+    time_shift=$(echo "-$first_packet_time" | bc -l)
+    editcap -t "$time_shift" "$pcap_file" "$pcap_file_synced" >/dev/null 2>&1
+    rm $pcap_file
+    echo -e "Capture first packet time shifted to the beginning of epoch time, saved to $pcap_file_synced, old file removed"
 }
 
 for combination in "${TCP_CC_COMBINATIONS[@]}"; do
-    read client_cc server_cc <<< "$combination"
+    read client_cc server_cc <<<"$combination"
     echo -e "\nRunning TCP benchmarks with ($client_cc/$server_cc) congestion control"
 
     set_tcp_cc "$CLIENT_VM" "$client_cc"
@@ -119,3 +136,5 @@ run_benchmark "http3" "" "" "udp"
 run_benchmark "tftp" "" "" "udp"
 
 echo -e "\nAll benchmarks have been run, dumps have been stored in $OUTPUT_DIR"
+mergecap -w $OUTPUT_DIR/merged.pcap "$OUTPUT_DIR"/*.pcap
+echo -e "\nDumps have been merged: $OUTPUT_DIR/merged.pcap"
